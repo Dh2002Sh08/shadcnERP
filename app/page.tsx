@@ -8,8 +8,8 @@ import { Orders } from '../components/modules/Orders'
 import { Customers } from '../components/modules/Customers'
 import { Suppliers } from '../components/modules/Suppliers'
 import { Invoices } from '../components/modules/Invoices'
-import { Reports } from '../components/modules/Reports'
-import { Settings } from '../components/modules/Settings'
+// import { Reports } from '../components/modules/Reports'
+// import { Settings } from '../components/modules/Settings'
 
 export default function HomePage() {
   const [activeModule, setActiveModule] = useState('dashboard')
@@ -36,8 +36,8 @@ export default function HomePage() {
       case 'customers': return <Customers />
       case 'suppliers': return <Suppliers />
       case 'invoices': return <Invoices />
-      case 'reports': return <Reports />
-      case 'settings': return <Settings />
+      // case 'reports': return <Reports />
+      // case 'settings': return <Settings />
       default: return <Dashboard />
     }
   }

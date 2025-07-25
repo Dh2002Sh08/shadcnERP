@@ -6,7 +6,7 @@ interface MetricCardProps {
   value: string | number;
   change?: number;
   changeLabel?: string;
-  icon: LucideIcon;
+  icon: typeof LucideIcon;
   color: 'blue' | 'green' | 'yellow' | 'red' | 'purple';
 }
 

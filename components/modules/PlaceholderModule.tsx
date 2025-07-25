@@ -4,7 +4,7 @@ import { DivideIcon as LucideIcon } from 'lucide-react';
 interface PlaceholderModuleProps {
   title: string;
   description: string;
-  icon: LucideIcon;
+  icon: typeof LucideIcon;
 }
 
 export const PlaceholderModule: React.FC<PlaceholderModuleProps> = ({ 

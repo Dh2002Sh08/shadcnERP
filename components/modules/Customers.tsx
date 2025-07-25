@@ -1,164 +1,50 @@
-import React, { useEffect, useState } from 'react';
-import { Search, Filter, Plus, Edit2, MapPin, Phone, Mail, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Filter, Plus, Edit2, MapPin, Phone, Mail } from 'lucide-react';
 import { dbService } from '../../lib/supabase';
 import { Customer } from '../../types';
+import { CustomerForm } from '../forms/CustomerForm';
 
 export const Customers: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [customerData, setCustomerData] = useState<Partial<Omit<Customer, 'id' | 'created_at'>>>({
-    name: '',
-    type: 'hospital',
-    contactPerson: '',
-    email: '',
-    phone: '',
-    address: '',
-    licenseNumber: '',
-    creditLimit: 0,
-    outstandingBalance: 0,
-    status: 'active'
-  });
+  const [showCustomerForm, setShowCustomerForm] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null >(null);
 
   useEffect(() => {
-    fetchCustomers();
+    loadCustomers();
   }, []);
 
-  const fetchCustomers = async () => {
+  const loadCustomers = async () => {
     try {
       const data = await dbService.getCustomers();
-      console.log('Fetched Customers:', data);
-      setCustomers(data);
-    } catch (error: any) {
-      console.error('Error fetching customers:', error);
-      setFormError('Failed to fetch customers. Please try again.');
+      // Ensure credit_limit and outstanding_balance are numbers, default to 0 if undefined or null
+      const sanitizedData = (data || []).map(customer => ({
+        ...customer,
+        credit_limit: Number(customer.creditLimit) || 0,
+        outstanding_balance: Number(customer.outstandingBalance) || 0,
+      }));
+      setCustomers(sanitizedData);
+    } catch (error) {
+      console.error('Error loading customers:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const validateForm = () => {
-    if (!customerData.name?.trim()) return 'Customer name is required';
-    if (!customerData.contactPerson?.trim()) return 'Contact person is required';
-    if (!customerData.email?.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerData.email)) return 'Valid email is required';
-    if (!customerData.phone?.trim()) return 'Phone number is required';
-    if (!customerData.address?.trim()) return 'Address is required';
-    if (!customerData.licenseNumber?.trim()) return 'License number is required';
-    if (customerData.creditLimit === undefined || customerData.creditLimit < 0) return 'Credit limit must be non-negative';
-    if (customerData.outstandingBalance === undefined || customerData.outstandingBalance < 0) return 'Outstanding balance must be non-negative';
-    return null;
+  const handleAddCustomer = () => {
+    setSelectedCustomer(null);
+    setShowCustomerForm(true);
   };
 
-  const handleAddCustomer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError(null);
-
-    const validationError = validateForm();
-    if (validationError) {
-      setFormError(validationError);
-      return;
-    }
-
-    try {
-      const newCustomer: Omit<Customer, 'id' | 'created_at'> = {
-        name: customerData.name!,
-        type: customerData.type!,
-        contactPerson: customerData.contactPerson!,
-        email: customerData.email!,
-        phone: customerData.phone!,
-        address: customerData.address!,
-        licenseNumber: customerData.licenseNumber!,
-        creditLimit: customerData.creditLimit!,
-        outstandingBalance: customerData.outstandingBalance!,
-        status: customerData.status!
-      };
-
-      console.log('New Customer:', newCustomer);
-      await dbService.createCustomer(newCustomer);
-      await fetchCustomers(); // Refresh all customers to match Orders.tsx
-      resetForm();
-    } catch (error: any) {
-      console.error('Error adding customer:', error);
-      setFormError(error.message || 'Failed to add customer. Please try again.');
-    }
+  const handleEditCustomer = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setShowCustomerForm(true);
   };
 
-  const handleEditCustomer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError(null);
-
-    if (!selectedCustomerId) {
-      setFormError('No customer selected for editing');
-      return;
-    }
-
-    const validationError = validateForm();
-    if (validationError) {
-      setFormError(validationError);
-      return;
-    }
-
-    try {
-      const updatedCustomer: Partial<Omit<Customer, 'id' | 'created_at'>> = {
-        name: customerData.name!,
-        type: customerData.type!,
-        contactPerson: customerData.contactPerson!,
-        email: customerData.email!,
-        phone: customerData.phone!,
-        address: customerData.address!,
-        licenseNumber: customerData.licenseNumber!,
-        creditLimit: customerData.creditLimit!,
-        outstandingBalance: customerData.outstandingBalance!,
-        status: customerData.status!
-      };
-
-      console.log('Updated Customer:', updatedCustomer);
-      await dbService.updateCustomer(selectedCustomerId, updatedCustomer);
-      await fetchCustomers(); // Refresh all customers to match Orders.tsx
-      resetForm();
-    } catch (error: any) {
-      console.error('Error updating customer:', error);
-      setFormError(error.message || 'Failed to update customer. Please try again.');
-    }
-  };
-
-  const resetForm = () => {
-    setIsModalOpen(false);
-    setIsEditing(false);
-    setSelectedCustomerId(null);
-    setCustomerData({
-      name: '',
-      type: 'hospital',
-      contactPerson: '',
-      email: '',
-      phone: '',
-      address: '',
-      licenseNumber: '',
-      creditLimit: 0,
-      outstandingBalance: 0,
-      status: 'active'
-    });
-    setFormError(null);
-  };
-
-  const openEditModal = (customer: Customer) => {
-    setIsEditing(true);
-    setSelectedCustomerId(customer.id);
-    setCustomerData({
-      name: customer.name,
-      type: customer.type,
-      contactPerson: customer.contactPerson,
-      email: customer.email,
-      phone: customer.phone,
-      address: customer.address,
-      licenseNumber: customer.licenseNumber,
-      creditLimit: customer.creditLimit,
-      outstandingBalance: customer.outstandingBalance,
-      status: customer.status
-    });
-    setIsModalOpen(true);
+  const handleFormSuccess = () => {
+    loadCustomers();
   };
 
   const filteredCustomers = customers.filter(customer => {
@@ -188,149 +74,17 @@ export const Customers: React.FC = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">{isEditing ? 'Edit Customer' : 'Add New Customer'}</h2>
-              <button onClick={resetForm} className="text-gray-500 hover:text-gray-700">
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            {formError && (
-              <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
-                {formError}
-              </div>
-            )}
-            <form onSubmit={isEditing ? handleEditCustomer : handleAddCustomer} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Customer Name</label>
-                <input
-                  type="text"
-                  value={customerData.name || ''}
-                  onChange={(e) => setCustomerData({ ...customerData, name: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg p-2"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Type</label>
-                <select
-                  value={customerData.type || 'hospital'}
-                  onChange={(e) => setCustomerData({ ...customerData, type: e.target.value as 'hospital' | 'pharmacy' | 'clinic' | 'wholesaler' })}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg p-2"
-                >
-                  <option value="hospital">Hospital</option>
-                  <option value="pharmacy">Pharmacy</option>
-                  <option value="clinic">Clinic</option>
-                  <option value="wholesaler">Wholesaler</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Contact Person</label>
-                <input
-                  type="text"
-                  value={customerData.contactPerson || ''}
-                  onChange={(e) => setCustomerData({ ...customerData, contactPerson: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg p-2"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Email</label>
-                <input
-                  type="email"
-                  value={customerData.email || ''}
-                  onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg p-2"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Phone</label>
-                <input
-                  type="text"
-                  value={customerData.phone || ''}
-                  onChange={(e) => setCustomerData({ ...customerData, phone: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg p-2"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Address</label>
-                <textarea
-                  value={customerData.address || ''}
-                  onChange={(e) => setCustomerData({ ...customerData, address: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg p-2"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">License Number</label>
-                <input
-                  type="text"
-                  value={customerData.licenseNumber || ''}
-                  onChange={(e) => setCustomerData({ ...customerData, licenseNumber: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg p-2"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Credit Limit</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={customerData.creditLimit || 0}
-                  onChange={(e) => setCustomerData({ ...customerData, creditLimit: parseFloat(e.target.value) || 0 })}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg p-2"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Outstanding Balance</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={customerData.outstandingBalance || 0}
-                  onChange={(e) => setCustomerData({ ...customerData, outstandingBalance: parseFloat(e.target.value) || 0 })}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg p-2"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Status</label>
-                <select
-                  value={customerData.status || 'active'}
-                  onChange={(e) => setCustomerData({ ...customerData, status: e.target.value as 'active' | 'inactive' | 'suspended' })}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg p-2"
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="suspended">Suspended</option>
-                </select>
-              </div>
-              <div className="flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  {isEditing ? 'Update Customer' : 'Add Customer'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
+      {/* Header Actions */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex flex-col sm:flex-row gap-4 flex-1">
           <div className="relative flex-1 max-w-md">
@@ -358,8 +112,8 @@ export const Customers: React.FC = () => {
             </select>
           </div>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
+        <button 
+          onClick={handleAddCustomer}
           className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
         >
           <Plus className="h-4 w-4" />
@@ -367,6 +121,7 @@ export const Customers: React.FC = () => {
         </button>
       </div>
 
+      {/* Customer Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-lg border border-gray-200">
           <div className="flex items-center justify-between">
@@ -397,7 +152,7 @@ export const Customers: React.FC = () => {
             <div>
               <p className="text-sm text-gray-600">Total Credit Limit</p>
               <p className="text-2xl font-bold text-purple-600">
-                ${customers.reduce((sum, c) => sum + c.creditLimit, 0).toLocaleString()}
+                ${customers.reduce((sum, c) => sum + (c.creditLimit || 0), 0).toLocaleString()}
               </p>
             </div>
             <div className="p-2 bg-purple-50 rounded-lg">
@@ -410,7 +165,7 @@ export const Customers: React.FC = () => {
             <div>
               <p className="text-sm text-gray-600">Outstanding Balance</p>
               <p className="text-2xl font-bold text-orange-600">
-                ${customers.reduce((sum, c) => sum + c.outstandingBalance, 0).toLocaleString()}
+                ${customers.reduce((sum, c) => sum + (c.outstandingBalance || 0), 0).toLocaleString()}
               </p>
             </div>
             <div className="p-2 bg-orange-50 rounded-lg">
@@ -420,6 +175,7 @@ export const Customers: React.FC = () => {
         </div>
       </div>
 
+      {/* Customers Table */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">Customer Directory</h3>
@@ -473,11 +229,11 @@ export const Customers: React.FC = () => {
                     {customer.licenseNumber}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    ${customer.creditLimit.toLocaleString()}
+                    ${(customer.creditLimit || 0).toLocaleString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <span className={customer.outstandingBalance > 0 ? 'text-red-600' : 'text-green-600'}>
-                      ${customer.outstandingBalance.toLocaleString()}
+                      ${(customer.outstandingBalance || 0).toLocaleString()}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -486,9 +242,9 @@ export const Customers: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
+                    <button 
+                      onClick={() => handleEditCustomer(customer)}
                       className="text-blue-600 hover:text-blue-900"
-                      onClick={() => openEditModal(customer)}
                     >
                       <Edit2 className="h-4 w-4" />
                     </button>
@@ -499,6 +255,13 @@ export const Customers: React.FC = () => {
           </table>
         </div>
       </div>
+
+      <CustomerForm
+        isOpen={showCustomerForm}
+        onClose={() => setShowCustomerForm(false)}
+        onSuccess={handleFormSuccess}
+        customer={selectedCustomer ?? undefined}
+      />
     </div>
   );
 };

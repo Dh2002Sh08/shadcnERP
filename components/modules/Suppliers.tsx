@@ -1,28 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import { Search, Filter, Plus, Edit2, Phone, Mail, MapPin, Star, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Filter, Plus, Edit2, Phone, Mail, MapPin, Star } from 'lucide-react';
 import { dbService } from '../../lib/supabase';
 import { Supplier } from '../../types';
+import { SupplierForm } from '../forms/SupplierForm';
 
 export const Suppliers: React.FC = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [supplierData, setSupplierData] = useState<Partial<Omit<Supplier, 'id' | 'created_at'>>>({
-    name: '',
-    contactPerson: '',
-    email: '',
-    phone: '',
-    address: '',
-    licenseNumber: '',
-    rating: 0,
-    paymentTerms: '',
-    status: 'active'
-  });
+  const [showSupplierForm, setShowSupplierForm] = useState(false);
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
 
   useEffect(() => {
     loadSuppliers();
@@ -31,132 +19,26 @@ export const Suppliers: React.FC = () => {
   const loadSuppliers = async () => {
     try {
       const data = await dbService.getSuppliers();
-      console.log('Fetched Suppliers:', data);
       setSuppliers(data || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error loading suppliers:', error);
-      setFormError('Failed to load suppliers. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const validateForm = () => {
-    if (!supplierData.name?.trim()) return 'Supplier name is required';
-    if (!supplierData.contactPerson?.trim()) return 'Contact person is required';
-    if (!supplierData.email?.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supplierData.email)) return 'Valid email is required';
-    if (!supplierData.phone?.trim()) return 'Phone number is required';
-    if (!supplierData.address?.trim()) return 'Address is required';
-    if (!supplierData.licenseNumber?.trim()) return 'License number is required';
-    if (supplierData.rating === undefined || supplierData.rating < 0 || supplierData.rating > 5) return 'Rating must be between 0 and 5';
-    if (!supplierData.paymentTerms?.trim()) return 'Payment terms are required';
-    return null;
+  const handleAddSupplier = () => {
+    setSelectedSupplier(null);
+    setShowSupplierForm(true);
   };
 
-  const handleAddSupplier = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError(null);
-
-    const validationError = validateForm();
-    if (validationError) {
-      setFormError(validationError);
-      return;
-    }
-
-    try {
-      const newSupplier: Omit<Supplier, 'id' | 'created_at'> = {
-        name: supplierData.name!,
-        contactPerson: supplierData.contactPerson!,
-        email: supplierData.email!,
-        phone: supplierData.phone!,
-        address: supplierData.address!,
-        licenseNumber: supplierData.licenseNumber!,
-        rating: supplierData.rating!,
-        paymentTerms: supplierData.paymentTerms!,
-        status: supplierData.status!
-      };
-
-      console.log('New Supplier:', newSupplier);
-      await dbService.createSupplier(newSupplier);
-      await loadSuppliers(); // Refresh all suppliers
-      resetForm();
-    } catch (error: any) {
-      console.error('Error adding supplier:', error);
-      setFormError(error.message || 'Failed to add supplier. Please try again.');
-    }
+  const handleEditSupplier = (supplier: Supplier) => {
+    setSelectedSupplier(supplier);
+    setShowSupplierForm(true);
   };
 
-  const handleEditSupplier = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError(null);
-
-    if (!selectedSupplierId) {
-      setFormError('No supplier selected for editing');
-      return;
-    }
-
-    const validationError = validateForm();
-    if (validationError) {
-      setFormError(validationError);
-      return;
-    }
-
-    try {
-      const updatedSupplier: Partial<Omit<Supplier, 'id' | 'created_at'>> = {
-        name: supplierData.name!,
-        contactPerson: supplierData.contactPerson!,
-        email: supplierData.email!,
-        phone: supplierData.phone!,
-        address: supplierData.address!,
-        licenseNumber: supplierData.licenseNumber!,
-        rating: supplierData.rating!,
-        paymentTerms: supplierData.paymentTerms!,
-        status: supplierData.status!
-      };
-
-      console.log('Updated Supplier:', updatedSupplier);
-      await dbService.updateSupplier(selectedSupplierId, updatedSupplier);
-      await loadSuppliers(); // Refresh all suppliers
-      resetForm();
-    } catch (error: any) {
-      console.error('Error updating supplier:', error);
-      setFormError(error.message || 'Failed to update supplier. Please try again.');
-    }
-  };
-
-  const resetForm = () => {
-    setIsModalOpen(false);
-    setIsEditing(false);
-    setSelectedSupplierId(null);
-    setSupplierData({
-      name: '',
-      contactPerson: '',
-      email: '',
-      phone: '',
-      address: '',
-      licenseNumber: '',
-      rating: 0,
-      paymentTerms: '',
-      status: 'active'
-    });
-    setFormError(null);
-  };
-
-  const openEditModal = (supplier: Supplier) => {
-    setIsEditing(true);
-    setSelectedSupplierId(supplier.id);
-    setSupplierData({
-      name: supplier.name,
-      contactPerson: supplier.contactPerson,
-      email: supplier.email,
-      phone: supplier.phone,
-      address: supplier.address,
-      licenseNumber: supplier.licenseNumber,
-      rating: supplier.rating,
-      paymentTerms: supplier.paymentTerms,
-      status: supplier.status
-    });
-    setIsModalOpen(true);
+  const handleFormSuccess = () => {
+    loadSuppliers();
   };
 
   const filteredSuppliers = suppliers.filter(supplier => {
@@ -194,134 +76,7 @@ export const Suppliers: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">{isEditing ? 'Edit Supplier' : 'Add New Supplier'}</h2>
-              <button onClick={resetForm} className="text-gray-500 hover:text-gray-700">
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            {formError && (
-              <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
-                {formError}
-              </div>
-            )}
-            <form onSubmit={isEditing ? handleEditSupplier : handleAddSupplier} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Supplier Name</label>
-                <input
-                  type="text"
-                  value={supplierData.name || ''}
-                  onChange={(e) => setSupplierData({ ...supplierData, name: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg p-2"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Contact Person</label>
-                <input
-                  type="text"
-                  value={supplierData.contactPerson || ''}
-                  onChange={(e) => setSupplierData({ ...supplierData, contactPerson: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg p-2"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Email</label>
-                <input
-                  type="email"
-                  value={supplierData.email || ''}
-                  onChange={(e) => setSupplierData({ ...supplierData, email: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg p-2"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Phone</label>
-                <input
-                  type="text"
-                  value={supplierData.phone || ''}
-                  onChange={(e) => setSupplierData({ ...supplierData, phone: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg p-2"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Address</label>
-                <textarea
-                  value={supplierData.address || ''}
-                  onChange={(e) => setSupplierData({ ...supplierData, address: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg p-2"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">License Number</label>
-                <input
-                  type="text"
-                  value={supplierData.licenseNumber || ''}
-                  onChange={(e) => setSupplierData({ ...supplierData, licenseNumber: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg p-2"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Rating (0-5)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="5"
-                  step="1"
-                  value={supplierData.rating || 0}
-                  onChange={(e) => setSupplierData({ ...supplierData, rating: parseInt(e.target.value) || 0 })}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg p-2"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Payment Terms</label>
-                <input
-                  type="text"
-                  value={supplierData.paymentTerms || ''}
-                  onChange={(e) => setSupplierData({ ...supplierData, paymentTerms: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg p-2"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Status</label>
-                <select
-                  value={supplierData.status || 'active'}
-                  onChange={(e) => setSupplierData({ ...supplierData, status: e.target.value as 'active' | 'inactive' })}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg p-2"
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
-              <div className="flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  {isEditing ? 'Update Supplier' : 'Add Supplier'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
+      {/* Header Actions */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex flex-col sm:flex-row gap-4 flex-1">
           <div className="relative flex-1 max-w-md">
@@ -347,8 +102,8 @@ export const Suppliers: React.FC = () => {
             </select>
           </div>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
+        <button 
+          onClick={handleAddSupplier}
           className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
         >
           <Plus className="h-4 w-4" />
@@ -356,6 +111,7 @@ export const Suppliers: React.FC = () => {
         </button>
       </div>
 
+      {/* Supplier Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-lg border border-gray-200">
           <div className="flex items-center justify-between">
@@ -409,6 +165,7 @@ export const Suppliers: React.FC = () => {
         </div>
       </div>
 
+      {/* Suppliers Table */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">Supplier Directory</h3>
@@ -470,9 +227,9 @@ export const Suppliers: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
+                    <button 
+                      onClick={() => handleEditSupplier(supplier)}
                       className="text-blue-600 hover:text-blue-900"
-                      onClick={() => openEditModal(supplier)}
                     >
                       <Edit2 className="h-4 w-4" />
                     </button>
@@ -483,6 +240,13 @@ export const Suppliers: React.FC = () => {
           </table>
         </div>
       </div>
+
+      <SupplierForm
+        isOpen={showSupplierForm}
+        onClose={() => setShowSupplierForm(false)}
+        onSuccess={handleFormSuccess}
+        supplier={selectedSupplier ?? undefined}
+      />
     </div>
   );
 };

@@ -25,8 +25,8 @@ const menuItems = [
   { id: 'customers', label: 'Customers', icon: Users },
   { id: 'suppliers', label: 'Suppliers', icon: Truck },
   { id: 'invoices', label: 'Invoices', icon: FileText },
-  { id: 'reports', label: 'Reports', icon: BarChart3 },
-  { id: 'settings', label: 'Settings', icon: Settings },
+  // { id: 'reports', label: 'Reports', icon: BarChart3 },
+  // { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeModule, onModuleChange }) => {

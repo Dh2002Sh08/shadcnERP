@@ -1,4 +1,5 @@
 import React from 'react';
+import { useState, useEffect } from 'react';
 import { MetricCard } from '../common/MetricCard';
 import { 
   DollarSign, 
@@ -7,15 +8,57 @@ import {
   Package, 
   AlertTriangle, 
   Users,
-  TrendingUp,
+  // TrendingUp,
   BarChart3
 } from 'lucide-react';
-import { mockDashboardMetrics, mockOrders, mockProducts } from '../../data/mockData';
+import { dbService } from '../../lib/supabase';
+import { Order, Product } from '@/types';
 
 export const Dashboard: React.FC = () => {
-  const metrics = mockDashboardMetrics;
-  const recentOrders = mockOrders.slice(0, 5);
-  const lowStockProducts = mockProducts.filter(p => p.quantity <= p.reorderLevel);
+  const [metrics, setMetrics] = useState({
+    totalRevenue: 0,
+    totalOrders: 0,
+    pendingOrders: 0,
+    lowStockItems: 0,
+    expiringItems: 0,
+    activeCustomers: 0,
+    revenueGrowth: 0,
+    orderGrowth: 0
+  });
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [lowStockProducts, setLowStockProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      const [dashboardMetrics, orders, products] = await Promise.all([
+        dbService.getDashboardMetrics(),
+        dbService.getOrders(),
+        dbService.getProducts()
+      ]);
+
+      setMetrics(dashboardMetrics);
+      setRecentOrders((orders || []).slice(0, 5));
+      setLowStockProducts((products || []).filter(p => p.quantity <= p.reorderLevel));
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -66,7 +109,7 @@ export const Dashboard: React.FC = () => {
               <div key={product.id} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
                 <div>
                   <p className="text-sm font-medium text-gray-900">{product.name}</p>
-                  <p className="text-xs text-gray-600">SKU: {product.sku}</p>
+                  <p className="text-xs text-gray-600">SKU: {product.sku || 'N/A'}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold text-yellow-700">{product.quantity} units</p>
@@ -86,20 +129,21 @@ export const Dashboard: React.FC = () => {
             <span className="text-sm text-gray-500">{metrics.expiringItems} items</span>
           </div>
           <div className="space-y-3">
-            {mockProducts.filter(p => {
-              const daysUntilExpiry = Math.floor((p.expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+            {lowStockProducts.filter(p => {
+              if (!p.expiryDate) return false;
+              const daysUntilExpiry = Math.floor((new Date(p.expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
               return daysUntilExpiry <= 90 && daysUntilExpiry > 0;
             }).slice(0, 4).map((product) => {
-              const daysUntilExpiry = Math.floor((product.expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+              const daysUntilExpiry = Math.floor((new Date(product.expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
               return (
                 <div key={product.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                   <div>
                     <p className="text-sm font-medium text-gray-900">{product.name}</p>
-                    <p className="text-xs text-gray-600">Batch: {product.batchNumber}</p>
+                    <p className="text-xs text-gray-600">Batch: {product.batchNumber || 'N/A'}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold text-red-700">{daysUntilExpiry} days</p>
-                    <p className="text-xs text-gray-500">{product.expiryDate.toLocaleDateString()}</p>
+                    <p className="text-xs text-gray-500">{new Date(product.expiryDate).toLocaleDateString()}</p>
                   </div>
                 </div>
               );
@@ -135,9 +179,9 @@ export const Dashboard: React.FC = () => {
               {recentOrders.map((order) => (
                 <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="py-3 px-4 text-sm font-medium text-blue-600">{order.id}</td>
-                  <td className="py-3 px-4 text-sm text-gray-900">{order.customerName}</td>
-                  <td className="py-3 px-4 text-sm text-gray-600">{order.orderDate.toLocaleDateString()}</td>
-                  <td className="py-3 px-4 text-sm font-medium text-gray-900">${order.totalAmount}</td>
+                  <td className="py-3 px-4 text-sm text-gray-900">{order.customer_name}</td>
+                  <td className="py-3 px-4 text-sm text-gray-600">{new Date(order.order_date).toLocaleDateString()}</td>
+                  <td className="py-3 px-4 text-sm font-medium text-gray-900">${order.total_amount}</td>
                   <td className="py-3 px-4">
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                       order.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
