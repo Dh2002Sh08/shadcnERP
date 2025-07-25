@@ -6,8 +6,8 @@ import {
   Users, 
   Truck, 
   FileText, 
-  BarChart3, 
-  Settings,
+  // BarChart3, 
+  // Settings,
   ChevronLeft,
   ChevronRight,
   Building2
