@@ -8,7 +8,7 @@ export interface User {
 }
 
 export interface Product {
-  id: string;
+  id?: string;
   name: string;
   genericName: string;
   manufacturer: string;

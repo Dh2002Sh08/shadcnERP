@@ -18,7 +18,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<Product>({
-    id: product?.id || '',
+    // id: product?.id || '',
     name: product?.name || '',
     genericName: product?.genericName || '',
     manufacturer: product?.manufacturer || '',
@@ -42,7 +42,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     setLoading(true);
 
     try {
-      if (product) {
+      if (product && product.id) {
         await dbService.updateProduct(product.id, formData);
       } else {
         await dbService.createProduct(formData);

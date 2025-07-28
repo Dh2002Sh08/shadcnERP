@@ -12,7 +12,7 @@ import {
   BarChart3
 } from 'lucide-react';
 import { dbService } from '../../lib/supabase';
-import { Order, Product } from '@/types';
+import { Invoice, Order, Product } from '@/types';
 
 export const Dashboard: React.FC = () => {
   const [metrics, setMetrics] = useState({
@@ -28,6 +28,7 @@ export const Dashboard: React.FC = () => {
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [lowStockProducts, setLowStockProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
 
   useEffect(() => {
     loadDashboardData();
@@ -42,6 +43,9 @@ export const Dashboard: React.FC = () => {
         dbService.getProducts()
       ]);
 
+      const data = await dbService.getInvoices();
+      setInvoices(data || []);
+
       setMetrics(dashboardMetrics);
       setRecentOrders((orders || []).slice(0, 5));
       setLowStockProducts((products || []).filter(p => p.quantity <= p.reorderLevel));
@@ -50,6 +54,10 @@ export const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getTotalRevenue = () => {
+    return invoices.reduce((sum, invoice) => sum + invoice.total_amount, 0);
   };
 
   if (loading) {
@@ -66,7 +74,7 @@ export const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="Total Revenue"
-          value={`$${(metrics.totalRevenue / 1000000).toFixed(1)}M`}
+          value={`$${getTotalRevenue().toLocaleString()}M`}
           change={metrics.revenueGrowth}
           changeLabel="vs last month"
           icon={DollarSign}

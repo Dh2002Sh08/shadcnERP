@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { Customer, Order, OrderItem, Product, Supplier, Invoice, InvoiceItem, DashboardMetrics, CustomerInput, OrderInput } from '@/types';
+// import type { NextApiRequest, NextApiResponse } from 'next';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -375,4 +376,45 @@ export const dbService = {
       };
     }
   },
+
+  // Delete user account (auth + related data)
+//   async deleteAccount(userId: string): Promise<{ success: boolean; message?: string }> {
+//     try {
+//       // Clean up related database records in a transaction
+//       const [invoicesResult, ordersResult, customersResult, profileResult] = await Promise.all([
+//         supabase.from('invoices').delete().eq('customer_id', userId),
+//         supabase.from('orders').delete().eq('customer_id', userId),
+//         supabase.from('customers').delete().eq('id', userId),
+//         supabase.from('profile').delete().eq('id', userId),
+//       ]);
+
+//       // Check for errors in table deletions
+//       for (const [table, result] of [
+//         ['invoices', invoicesResult],
+//         ['orders', ordersResult],
+//         ['customers', customersResult],
+//         ['profile', profileResult],
+//       ]) {
+//         // Defensive: skip check if result is a string (error property only exists on PostgrestSingleResponse)
+//         if (typeof result !== 'string' && result.error) {
+//           throw new Error(`Failed to delete from ${table}: ${result.error.message}`);
+//         }
+//       }
+
+//       // Delete the auth user using Supabase admin API
+//       const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+
+//       if (authError) {
+//         throw new Error(`Failed to delete auth account: ${authError.message}`);
+//       }
+
+//       return { success: true };
+//     } catch (error: unknown) {
+//       const errorMessage = error instanceof Error ? error.message : String(error);
+//       console.error('Error deleting account:', errorMessage, { userId, error });
+//       return { success: false, message: errorMessage };
+//     }
+// }
+
+
 };

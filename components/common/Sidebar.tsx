@@ -83,14 +83,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, onModuleChange }
       <div className="p-4 border-t border-slate-700">
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-            <span className="text-sm font-medium">A</span>
+            {/* <span className="text-sm font-medium">A</span> */}
           </div>
-          {!collapsed && (
+          {/* {!collapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">Admin User</p>
               <p className="text-xs text-slate-400 truncate">admin@unknown.com</p>
             </div>
-          )}
+          )} */}
         </div>
       </div>
     </div>
